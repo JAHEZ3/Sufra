@@ -1,0 +1,120 @@
+@import url("https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&display=swap");
+@import "tailwindcss";
+
+:root {
+  /* Brand Colors */
+  --primary: #1f8a5b;
+  --primary-hover: #176f49;
+  --primary-light: #e6f2ec;
+  --primary-dark: #145c3c;
+
+  /* Neutrals */
+  --background: #f7f8f5;
+  --foreground: #16201b;
+  --surface: #ffffff;
+  --muted: #eef0ec;
+  --muted-foreground: #5f6b64;
+  --border: #dce3de;
+  --border-light: #eef0ec;
+  --card: #ffffff;
+
+  /* Sidebar */
+  --sidebar-bg: #ffffff;
+  --sidebar-width: 240px;
+
+  /* Status colors */
+  --success: #1f8a5b;
+  --success-light: #e6f2ec;
+  --warning: #c98a1e;
+  --warning-light: #fbf3e3;
+  --error: #b02500;
+  --error-light: #fdecea;
+  --info: #2a6fdb;
+  --info-light: #e9f0fc;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.12);
+  --shadow-orange: 0 4px 16px rgba(31, 138, 91, 0.2);
+}
+
+@theme inline {
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-light: var(--primary-light);
+  --color-primary-dark: var(--primary-dark);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-border-light: var(--border-light);
+  --color-card: var(--card);
+  --color-success: var(--success);
+  --color-success-light: var(--success-light);
+  --color-warning: var(--warning);
+  --color-warning-light: var(--warning-light);
+  --color-error: var(--error);
+  --color-error-light: var(--error-light);
+  --color-info: var(--info);
+  --color-info-light: var(--info-light);
+  --font-sans: "Cairo", Arial, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: "Cairo", Arial, sans-serif;
+  direction: rtl;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: #f1f1f1; }
+::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--primary); }
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(16px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to   { opacity: 1; transform: scale(1); }
+}
+@keyframes pulse-dot {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50%       { transform: scale(1.4); opacity: 0.7; }
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.animate-fade-in-up  { animation: fadeInUp 0.35s ease-out both; }
+.animate-slide-in    { animation: slideInRight 0.3s ease-out forwards; }
+.animate-scale-in    { animation: scaleIn 0.3s ease-out forwards; }
+.animate-pulse-dot   { animation: pulse-dot 1.5s ease-in-out infinite; }
+.animate-spin        { animation: spin 1s linear infinite; }
+
+input, textarea, select { font-family: "Cairo", Arial, sans-serif; }
+
+.card {
+  background: var(--card);
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+}
+
+.badge-active   { background: var(--success-light); color: #065f46; }
+.badge-inactive { background: var(--error-light);   color: #991b1b; }
+.badge-pending  { background: var(--warning-light);  color: #92400e; }
+.badge-blocked  { background: #fde8e8;               color: #b91c1c; }

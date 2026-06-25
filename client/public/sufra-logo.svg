@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 110" fill="none">
+  <g transform="translate(10, 22)">
+    <g fill="#1f8a5b">
+      <rect x="2" y="22" width="10" height="3" rx="1.5"/>
+      <rect x="2" y="29" width="13" height="3" rx="1.5"/>
+      <rect x="4" y="36" width="9" height="3" rx="1.5"/>
+    </g>
+    <g fill="#1f8a5b">
+      <circle cx="40" cy="28" r="18"/>
+      <path d="M24 40 Q19 50 12 60 Q26 50 38 41 Z"/>
+    </g>
+    <g fill="#e6f2ec">
+      <circle cx="40" cy="20.5" r="2.2"/>
+      <path d="M28 33 C28 26.5 33 23 40 23 C47 23 52 26.5 52 33 Z"/>
+      <rect x="26" y="33" width="28" height="2.8" rx="1.4"/>
+    </g>
+  </g>
+  <text x="200" y="62" font-family="'Tajawal','Cairo','Segoe UI',sans-serif" font-size="54" font-weight="900" fill="#1f8a5b" text-anchor="middle" style="direction:rtl">سفرة</text>
+  <text x="200" y="92" font-family="'Tajawal','Cairo','Segoe UI',sans-serif" font-size="15" font-weight="700" fill="#16201b" text-anchor="middle" style="direction:rtl">مطعمك في راحة يدك</text>
+</svg>
