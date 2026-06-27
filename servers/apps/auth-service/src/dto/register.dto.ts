@@ -2,25 +2,9 @@ import {
   IsEmail,
   IsMobilePhone,
   IsNotEmpty,
-  IsObject,
-  IsOptional,
   IsString,
   MinLength,
 } from 'class-validator';
-
-export class RegisterCustomerDto {
-  @IsMobilePhone(undefined, undefined, { message: 'رقم الهاتف غير صالح.' })
-  phone: string;
-
-  @IsOptional()
-  @IsObject({ message: 'معلومات الجهاز يجب أن تكون كائناً.' })
-  deviceInfo?: Record<string, any>;
-}
-
-export class RegisterDeliveryDto {
-  @IsMobilePhone(undefined, undefined, { message: 'رقم الهاتف غير صالح.' })
-  phone: string;
-}
 
 export class RegisterRestaurantDto {
   @IsMobilePhone(undefined, undefined, { message: 'رقم الهاتف غير صالح.' })

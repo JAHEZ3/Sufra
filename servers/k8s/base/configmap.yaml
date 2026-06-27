@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sufra-config
+  namespace: sufra
+data:
+  NODE_ENV: "production"
+  # ─── Message broker (NATS) ───────────────────────────────────────────────
+  NATS_URL: "nats://nats.sufra.svc.cluster.local:4222"
+  # ─── Datastores ──────────────────────────────────────────────────────────
+  DB_HOST: "postgres.sufra.svc.cluster.local"
+  DB_PORT: "5432"
+  DB_NAME: "sufra_db"
+  REDIS_HOST: "redis.sufra.svc.cluster.local"
+  REDIS_PORT: "6379"
+  # ─── Misc ────────────────────────────────────────────────────────────────
+  CORS_ORIGINS: "*"

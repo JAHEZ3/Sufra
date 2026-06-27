@@ -14,19 +14,8 @@ import {
 import type { Request } from "express";
 import { EventPattern, Payload } from "@nestjs/microservices";
 import { AuthService } from "./auth.service";
-import {
-  RegisterCustomerDto,
-  RegisterDeliveryDto,
-  RegisterRestaurantDto,
-} from "./dto/register.dto";
-import { ResendOtpDto, VerifyOtpDto } from "./dto/verify-otp.dto";
-import {
-  DeliveryLoginOtpDto,
-  LoginCustomerDto,
-  LoginDeliveryDto,
-  LoginManagerDto,
-  LoginRestaurantDto,
-} from "./dto/login.dto";
+import { RegisterRestaurantDto } from "./dto/register.dto";
+import { LoginManagerDto, LoginRestaurantDto } from "./dto/login.dto";
 import { RefreshTokenDto } from "./dto/refresh-token.dto";
 import { ForgotPasswordDto } from "./dto/forgot-password.dto";
 import { ResetPasswordDto } from "./dto/reset-password.dto";
@@ -39,6 +28,9 @@ import { RolesGuard } from "./guards/roles.guard";
 import { Roles } from "./decorators/roles.decorator";
 import { CurrentUser } from "./decorators/current-user.decorator";
 
+// Sufra auth is restaurant-owner + manager only. Customer/delivery accounts and
+// the phone-verification OTP flow were removed; password login + password reset
+// are the only auth paths.
 @Controller()
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
@@ -52,18 +44,8 @@ export class AuthController {
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // REGISTRATION  —  Step 1: phone → OTP (status: PENDING)
+  // REGISTRATION  —  restaurant owner (one-step: no OTP, active immediately)
   // ═══════════════════════════════════════════════════════════════════════════
-
-  @Post("customer/register")
-  registerCustomer(@Body() dto: RegisterCustomerDto) {
-    return this.authService.registerCustomer(dto);
-  }
-
-  @Post("delivery/register")
-  registerDelivery(@Body() dto: RegisterDeliveryDto) {
-    return this.authService.registerDelivery(dto);
-  }
 
   @Post("restaurant/register")
   registerRestaurant(@Body() dto: RegisterRestaurantDto, @Req() req: Request) {
@@ -71,56 +53,8 @@ export class AuthController {
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // REGISTRATION  —  Step 2: verify OTP (status: SUSPENDED + tokens issued)
+  // LOGIN  —  restaurant (phone + password) / manager (email + password)
   // ═══════════════════════════════════════════════════════════════════════════
-
-  /** Verifies the PHONE_VERIFY OTP for any phone-based role. */
-  @Post("verify-otp")
-  verifyOtp(@Body() dto: VerifyOtpDto, @Req() req: Request) {
-    return this.authService.verifyRegistrationOtp(dto, this.sessionContext(req));
-  }
-
-  /** Resends PHONE_VERIFY OTP (max 3 / 24 h). */
-  @Post("resend-otp")
-  resendOtp(@Body() dto: ResendOtpDto) {
-    return this.authService.resendOtp(dto);
-  }
-
-  // ═══════════════════════════════════════════════════════════════════════════
-  // LOGIN
-  // ═══════════════════════════════════════════════════════════════════════════
-
-  /** Step 1 of customer OTP login — sends a LOGIN OTP. */
-  @Post("customer/login")
-  loginCustomer(@Body() dto: LoginCustomerDto) {
-    return this.authService.loginCustomer(dto);
-  }
-
-  /** Step 2 of customer OTP login — verifies OTP and returns tokens. */
-  @Post("customer/verify-login")
-  verifyLoginOtp(@Body() dto: VerifyOtpDto, @Req() req: Request) {
-    return this.authService.verifyLoginOtp(dto, this.sessionContext(req));
-  }
-
-  @Post("delivery/login")
-  loginDelivery(@Body() dto: LoginDeliveryDto, @Req() req: Request) {
-    return this.authService.loginDelivery(dto, this.sessionContext(req));
-  }
-
-  /**
-   * OTP-login fallback for drivers with no password yet (phone verified but
-   * application form not submitted). Step 1: send a login OTP.
-   */
-  @Post("delivery/login-otp")
-  sendDeliveryLoginOtp(@Body() dto: DeliveryLoginOtpDto) {
-    return this.authService.sendDeliveryLoginOtp(dto);
-  }
-
-  /** Step 2 of the driver OTP-login fallback — verify OTP and return tokens. */
-  @Post("delivery/verify-login")
-  verifyDeliveryLoginOtp(@Body() dto: VerifyOtpDto, @Req() req: Request) {
-    return this.authService.verifyDeliveryLoginOtp(dto, this.sessionContext(req));
-  }
 
   @Post("restaurant/login")
   loginRestaurant(@Body() dto: LoginRestaurantDto, @Req() req: Request) {
@@ -133,7 +67,7 @@ export class AuthController {
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // PASSWORD MANAGEMENT  (delivery / restaurant / manager only)
+  // PASSWORD MANAGEMENT  (restaurant / manager)
   // ═══════════════════════════════════════════════════════════════════════════
 
   @Post("forgot-password")
@@ -256,36 +190,10 @@ export class AuthController {
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // NATS EVENT HANDLERS
-  // Each downstream service emits an event when something meaningful happens.
-  // Auth-service listens and updates the users table (single source of truth).
+  // NATS EVENT HANDLERS  (restaurant-service → users table updates)
   // ═══════════════════════════════════════════════════════════════════════════
 
-  /** customer-service → profile saved → user ACTIVE */
-  @EventPattern("customer.profile.completed")
-  onCustomerProfileCompleted(@Payload() data: { userId: string }) {
-    return this.authService.onCustomerProfileCompleted(data);
-  }
-
-  /** delivery-service → agent submitted application → profileCompleted = true */
-  @EventPattern("delivery.profile.completed")
-  onDeliveryProfileCompleted(@Payload() data: { userId: string }) {
-    return this.authService.onDeliveryProfileCompleted(data);
-  }
-
-  /** delivery-service → manager approved agent → user ACTIVE */
-  @EventPattern("delivery.agent.approved")
-  onDeliveryAgentApproved(@Payload() data: { userId: string }) {
-    return this.authService.onDeliveryAgentApproved(data);
-  }
-
-  /** delivery-service → manager rejected agent → profileCompleted reset */
-  @EventPattern("delivery.agent.rejected")
-  onDeliveryAgentRejected(@Payload() data: { userId: string }) {
-    return this.authService.onDeliveryAgentRejected(data);
-  }
-
-  /** restaurant-service → owner saved profile → profileCompleted = true */
+  /** restaurant-service → owner saved profile → profileCompleted = true + ACTIVE */
   @EventPattern("restaurant.profile.completed")
   onRestaurantProfileCompleted(@Payload() data: { userId: string }) {
     return this.authService.onRestaurantProfileCompleted(data);
@@ -303,7 +211,7 @@ export class AuthController {
     return this.authService.onRestaurantOwnerRejected(data);
   }
 
-  /** delivery-service or restaurant-service → password set for user */
+  /** restaurant-service → password set for user */
   @EventPattern("user.password.set")
   onPasswordSet(@Payload() data: { userId: string; password: string }) {
     return this.authService.onPasswordSet(data);
