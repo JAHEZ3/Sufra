@@ -1,0 +1,151 @@
+name: Servers CI/CD (EKS · ArgoCD)
+
+# Full pipeline for the NestJS microservices in servers/:
+#   1. CI    — compile every microservice on PRs / pushes.
+#   2. Build — on push to main: build & push one image per service to AWS ECR.
+#   3. GitOps— bump the image tags in servers/k8s/base/kustomization.yaml and
+#              commit. ArgoCD watches that path and rolls the new images onto EKS.
+#
+# ── One-time setup (GitHub repo settings) ────────────────────────────────────
+#   Secrets:
+#     AWS_ROLE_ARN      – IAM role assumed via OIDC (ECR push + read)
+#     AWS_REGION        – e.g. eu-central-1
+#     AWS_ACCOUNT_ID    – 12-digit account id (for the ECR registry URL)
+#   Variables:
+#     ENABLE_DEPLOY = true   (optional gate; ArgoCD does the actual deploy)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "servers/**"
+      - ".github/workflows/servers-cicd.yml"
+      - "!servers/k8s/**"      # avoid a loop when the GitOps step commits tags
+      - "!servers/argocd/**"
+  pull_request:
+    branches: [main, dev]
+    paths:
+      - "servers/**"
+
+concurrency:
+  group: servers-cicd-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  SERVICES: "api-gateway auth-service order-service restaurant-service manager-service notification-service"
+
+jobs:
+  # ─── 1. CI: compile all services ────────────────────────────────────────────
+  ci:
+    name: Compile microservices
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: servers
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: servers/package-lock.json
+      - run: npm ci
+      - name: Build all microservices
+        run: |
+          for s in $SERVICES; do
+            echo "::group::nest build $s"; npx nest build "$s"; echo "::endgroup::"
+          done
+
+  # ─── 2. Build & push images to ECR ──────────────────────────────────────────
+  build-push:
+    name: Build & push (${{ matrix.service }})
+    needs: ci
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write       # OIDC → assume the AWS role
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        service:
+          - api-gateway
+          - auth-service
+          - order-service
+          - restaurant-service
+          - manager-service
+          - notification-service
+    outputs:
+      tag: ${{ steps.vars.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Short SHA
+        id: vars
+        run: echo "tag=sha-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Ensure ECR repository exists
+        run: |
+          aws ecr describe-repositories --repository-names "sufra/${{ matrix.service }}" \
+            || aws ecr create-repository --repository-name "sufra/${{ matrix.service }}" \
+                --image-scanning-configuration scanOnPush=true
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build & push
+        uses: docker/build-push-action@v6
+        with:
+          context: servers
+          file: servers/Dockerfile
+          build-args: SERVICE_NAME=${{ matrix.service }}
+          push: true
+          tags: |
+            ${{ steps.ecr.outputs.registry }}/sufra/${{ matrix.service }}:${{ steps.vars.outputs.tag }}
+            ${{ steps.ecr.outputs.registry }}/sufra/${{ matrix.service }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ─── 3. GitOps: bump image tags so ArgoCD syncs the new release ──────────────
+  gitops:
+    name: Bump manifests (GitOps)
+    needs: build-push
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install kustomize
+        run: |
+          curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash
+          sudo mv kustomize /usr/local/bin/
+
+      - name: Set new image tags
+        working-directory: servers/k8s/base
+        env:
+          REGISTRY: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
+          TAG: sha-${{ github.sha }}
+        run: |
+          SHORT="sha-${GITHUB_SHA::7}"
+          for s in $SERVICES; do
+            kustomize edit set image "sufra/$s=${REGISTRY}/sufra/$s:${SHORT}"
+          done
+
+      - name: Commit & push
+        run: |
+          git config user.name  "sufra-ci[bot]"
+          git config user.email "sufra-ci@users.noreply.github.com"
+          git add servers/k8s/base/kustomization.yaml
+          git commit -m "ci: release servers @ ${GITHUB_SHA::7} [skip ci]" || { echo "no changes"; exit 0; }
+          git push

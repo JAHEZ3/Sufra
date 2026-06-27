@@ -1,0 +1,33 @@
+# ArgoCD Application — GitOps deploy of the Sufra backend to EKS.
+# Apply once on the cluster:  kubectl apply -f servers/argocd/application.yaml
+# Thereafter ArgoCD watches servers/k8s/base and auto-syncs every commit the
+# CI "GitOps" step makes (new image tags).
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: sufra-backend
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/JAHEZ3/Sufra.git
+    targetRevision: main
+    path: servers/k8s/base
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: sufra
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ApplyOutOfSyncOnly=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 10s
+        factor: 2
+        maxDuration: 3m
