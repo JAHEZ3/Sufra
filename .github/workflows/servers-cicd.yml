@@ -20,12 +20,16 @@ on:
     paths:
       - "servers/**"
       - ".github/workflows/servers-cicd.yml"
-      - "!servers/k8s/**"      # avoid a loop when the GitOps step commits tags
+      - "!servers/k8s/**" # avoid a loop when the GitOps step commits tags
       - "!servers/argocd/**"
   pull_request:
     branches: [main, dev]
     paths:
       - "servers/**"
+
+permissions:
+  id-token: write
+  contents: read
 
 concurrency:
   group: servers-cicd-${{ github.ref }}
@@ -63,7 +67,7 @@ jobs:
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
     permissions:
-      id-token: write       # OIDC → assume the AWS role
+      id-token: write # OIDC → assume the AWS role
       contents: read
     strategy:
       fail-fast: false
