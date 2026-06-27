@@ -2,36 +2,48 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 namespace: sufra
 
-resources:
-  - namespace.yaml
-  - configmap.yaml
   # secrets.example.yaml is NOT included — apply real secrets out-of-band
   # (Sealed Secrets / External Secrets). See README.
-  - postgres.yaml      # drop this in production; use RDS instead
-  - redis.yaml
-  - nats.yaml
-  - services.yaml
-  - ingress.yaml
+resources:
+- namespace.yaml
+- configmap.yaml
+- postgres.yaml
+- redis.yaml
+- nats.yaml
+- services.yaml
+- ingress.yaml
 
 # Image tags are rewritten here by the CI "GitOps" step on every release:
 #   kustomize edit set image sufra/<svc>=<ECR>/sufra/<svc>:<sha>
 # The placeholders below are replaced on the first pipeline run.
 images:
-  - name: sufra/api-gateway
-    newName: ACCOUNT.dkr.ecr.REGION.amazonaws.com/sufra/api-gateway
-    newTag: latest
-  - name: sufra/auth-service
-    newName: ACCOUNT.dkr.ecr.REGION.amazonaws.com/sufra/auth-service
-    newTag: latest
-  - name: sufra/order-service
-    newName: ACCOUNT.dkr.ecr.REGION.amazonaws.com/sufra/order-service
-    newTag: latest
-  - name: sufra/restaurant-service
-    newName: ACCOUNT.dkr.ecr.REGION.amazonaws.com/sufra/restaurant-service
-    newTag: latest
-  - name: sufra/manager-service
-    newName: ACCOUNT.dkr.ecr.REGION.amazonaws.com/sufra/manager-service
-    newTag: latest
-  - name: sufra/notification-service
-    newName: ACCOUNT.dkr.ecr.REGION.amazonaws.com/sufra/notification-service
-    newTag: latest
+- name: sufra/api-gateway
+  newName: |-
+    220719767281.dkr.ecr.us-east-1
+    .amazonaws.com/sufra/api-gateway
+  newTag: sha-a1c53f8
+- name: sufra/auth-service
+  newName: |-
+    220719767281.dkr.ecr.us-east-1
+    .amazonaws.com/sufra/auth-service
+  newTag: sha-a1c53f8
+- name: sufra/manager-service
+  newName: |-
+    220719767281.dkr.ecr.us-east-1
+    .amazonaws.com/sufra/manager-service
+  newTag: sha-a1c53f8
+- name: sufra/notification-service
+  newName: |-
+    220719767281.dkr.ecr.us-east-1
+    .amazonaws.com/sufra/notification-service
+  newTag: sha-a1c53f8
+- name: sufra/order-service
+  newName: |-
+    220719767281.dkr.ecr.us-east-1
+    .amazonaws.com/sufra/order-service
+  newTag: sha-a1c53f8
+- name: sufra/restaurant-service
+  newName: |-
+    220719767281.dkr.ecr.us-east-1
+    .amazonaws.com/sufra/restaurant-service
+  newTag: sha-a1c53f8
