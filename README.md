@@ -32,9 +32,10 @@ Sufra/
 │   ├── libs/shared/          # كود مشترك
 │   ├── docker-compose.yml
 │   └── data-source.ts
-├── client/           # Next.js — واجهة العميل (QR Menu)
-├── dashboard/        # Next.js — لوحة تحكم المطعم
-├── paneldashboard/   # Next.js — لوحة الأدمن
+├── frontend/         # كل الواجهات
+│   ├── client/       # Next.js — واجهة العميل (QR Menu)
+│   ├── dashboard/    # Next.js — لوحة تحكم المطعم
+│   └── paneldashboard/ # Next.js — لوحة الأدمن
 └── mobile/           # تطبيق الجوال (النادل / KDS)
 ```
 
