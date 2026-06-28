@@ -14,7 +14,7 @@ spec:
   source:
     repoURL: https://github.com/JAHEZ3/Sufra.git
     targetRevision: main
-    path: servers/k8s/base
+    path: k8s/base
   destination:
     server: https://kubernetes.default.svc
     namespace: sufra
