@@ -21,29 +21,29 @@ images:
   newName: |-
     220719767281.dkr.ecr.us-east-1
     .amazonaws.com/sufra/api-gateway
-  newTag: sha-1319207
+  newTag: sha-6b4bc30
 - name: sufra/auth-service
   newName: |-
     220719767281.dkr.ecr.us-east-1
     .amazonaws.com/sufra/auth-service
-  newTag: sha-1319207
+  newTag: sha-6b4bc30
 - name: sufra/manager-service
   newName: |-
     220719767281.dkr.ecr.us-east-1
     .amazonaws.com/sufra/manager-service
-  newTag: sha-1319207
+  newTag: sha-6b4bc30
 - name: sufra/notification-service
   newName: |-
     220719767281.dkr.ecr.us-east-1
     .amazonaws.com/sufra/notification-service
-  newTag: sha-1319207
+  newTag: sha-6b4bc30
 - name: sufra/order-service
   newName: |-
     220719767281.dkr.ecr.us-east-1
     .amazonaws.com/sufra/order-service
-  newTag: sha-1319207
+  newTag: sha-6b4bc30
 - name: sufra/restaurant-service
   newName: |-
     220719767281.dkr.ecr.us-east-1
     .amazonaws.com/sufra/restaurant-service
-  newTag: sha-1319207
+  newTag: sha-6b4bc30
