@@ -201,12 +201,12 @@ sequenceDiagram
 
 | الموضوع | الملف |
 |---------|------|
-| صفحة العميل | `client/src/app/[restaurant]/t/[token]/page.tsx` |
+| صفحة العميل | `frontend/client/src/app/[restaurant]/t/[token]/page.tsx` |
 | طلب المسح + الإلحاق + الحالة العامة | `servers/apps/order-service/src/pos/pos.service.ts` |
 | المسارات العامة | `servers/apps/order-service/src/order-service.controller.ts` |
 | استخراج الطاولة بالـ QR / المنيو | `servers/apps/restaurant-service/src/restaurant-service.*` |
 | بوابة السوكِت (ضيف + `order:track`) | `servers/apps/api-gateway/src/gateway/socket.gateway.ts` |
 | جسر اللحظي (NATS → سوكِت) | `servers/apps/api-gateway/src/api-gateway.controller.ts` |
-| واجهات POS / الطاولات / الطلبات | `dashboard/src/app/(dashboard)/{pos,tables,orders}/page.tsx` |
+| واجهات POS / الطاولات / الطلبات | `frontend/dashboard/src/app/(dashboard)/{pos,tables,orders}/page.tsx` |
 
 </div>
