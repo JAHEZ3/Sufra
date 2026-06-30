@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: client
+  namespace: sufra
+  labels:
+    app: client
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: client
+  template:
+    metadata:
+      labels:
+        app: client
+    spec:
+      containers:
+        - name: client
+          image: 220719767281.dkr.ecr.us-east-1.amazonaws.com/sufra/client:v1
+          ports:
+            - containerPort: 3010
+          resources:
+            requests: { cpu: "50m", memory: "128Mi" }
+            limits: { cpu: "500m", memory: "512Mi" }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: client
+  namespace: sufra
+  labels:
+    app: client
+spec:
+  type: ClusterIP
+  selector:
+    app: client
+  ports:
+    - port: 80
+      targetPort: 3010
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: client
+  namespace: sufra
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80}]'
+    alb.ingress.kubernetes.io/healthcheck-path: /
+spec:
+  ingressClassName: alb
+  rules:
+    - http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: client
+                port:
+                  number: 80
