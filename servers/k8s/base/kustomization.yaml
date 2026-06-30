@@ -2,8 +2,8 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 namespace: sufra
 
-  # secrets.example.yaml is NOT included — apply real secrets out-of-band
-  # (Sealed Secrets / External Secrets). See README.
+# secrets.example.yaml is NOT included — apply real secrets out-of-band
+# (Sealed Secrets / External Secrets). See README.
 resources:
 - namespace.yaml
 - configmap.yaml
@@ -15,35 +15,22 @@ resources:
 
 # Image tags are rewritten here by the CI "GitOps" step on every release:
 #   kustomize edit set image sufra/<svc>=<ECR>/sufra/<svc>:<sha>
-# The placeholders below are replaced on the first pipeline run.
 images:
 - name: sufra/api-gateway
-  newName: |-
-    220719767281.dkr.ecr.us-east-1
-    .amazonaws.com/sufra/api-gateway
-  newTag: sha-1319207
+  newName: 220719767281.dkr.ecr.us-east-1.amazonaws.com/sufra/api-gateway
+  newTag: sha-6b4bc30
 - name: sufra/auth-service
-  newName: |-
-    220719767281.dkr.ecr.us-east-1
-    .amazonaws.com/sufra/auth-service
-  newTag: sha-1319207
+  newName: 220719767281.dkr.ecr.us-east-1.amazonaws.com/sufra/auth-service
+  newTag: sha-6b4bc30
 - name: sufra/manager-service
-  newName: |-
-    220719767281.dkr.ecr.us-east-1
-    .amazonaws.com/sufra/manager-service
-  newTag: sha-1319207
+  newName: 220719767281.dkr.ecr.us-east-1.amazonaws.com/sufra/manager-service
+  newTag: sha-6b4bc30
 - name: sufra/notification-service
-  newName: |-
-    220719767281.dkr.ecr.us-east-1
-    .amazonaws.com/sufra/notification-service
-  newTag: sha-1319207
+  newName: 220719767281.dkr.ecr.us-east-1.amazonaws.com/sufra/notification-service
+  newTag: sha-6b4bc30
 - name: sufra/order-service
-  newName: |-
-    220719767281.dkr.ecr.us-east-1
-    .amazonaws.com/sufra/order-service
-  newTag: sha-1319207
+  newName: 220719767281.dkr.ecr.us-east-1.amazonaws.com/sufra/order-service
+  newTag: sha-6b4bc30
 - name: sufra/restaurant-service
-  newName: |-
-    220719767281.dkr.ecr.us-east-1
-    .amazonaws.com/sufra/restaurant-service
-  newTag: sha-1319207
+  newName: 220719767281.dkr.ecr.us-east-1.amazonaws.com/sufra/restaurant-service
+  newTag: sha-6b4bc30
