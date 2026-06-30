@@ -26,6 +26,10 @@ spec:
               valueFrom: { secretKeyRef: { name: sufra-secrets, key: DB_PASSWORD } }
             - name: POSTGRES_DB
               valueFrom: { configMapKeyRef: { name: sufra-config, key: DB_NAME } }
+            # EBS volumes mount with a lost+found dir, so initdb needs a
+            # subdirectory of the mount point as its data directory.
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
           readinessProbe:
             exec: { command: ["pg_isready", "-U", "postgres"] }
             initialDelaySeconds: 10
@@ -40,6 +44,7 @@ spec:
       spec:
         accessModes: ["ReadWriteOnce"]
         resources: { requests: { storage: 10Gi } }
+---
 apiVersion: v1
 kind: Service
 metadata:
