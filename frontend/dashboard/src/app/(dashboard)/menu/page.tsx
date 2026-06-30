@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { Header } from "@/components/layout/Header";
 import {
@@ -38,12 +38,14 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogTrigger, DialogClose } from "@/components/ui/dialog";
 import { Select, SelectItem } from "@/components/ui/select";
-import { mealsApi } from "@/lib/api";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { mealsApi, inventoryApi } from "@/lib/api";
 import { formatCurrency } from "@/lib/utils";
 import {
   Plus, Pencil, Trash2, ChevronDown, ChevronUp,
   UtensilsCrossed, Eye, EyeOff, ImagePlus, X,
   ArrowUp, ArrowDown, Settings2, BookOpen, Sparkles,
+  ChefHat, Loader2, AlertTriangle,
 } from "lucide-react";
 import { useToast } from "@/providers/ToastProvider";
 import { SmartMenuImport } from "./SmartMenuImport";
@@ -437,6 +439,20 @@ function MealCard({
             <DialogTrigger asChild>
               <button
                 className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-muted transition-colors"
+                title="المكوّنات (الوصفة)"
+              >
+                <ChefHat className="w-4 h-4" />
+              </button>
+            </DialogTrigger>
+            <DialogContent title={`مكوّنات: ${meal.name}`}>
+              <RecipeManager mealId={meal.id} />
+            </DialogContent>
+          </Dialog>
+
+          <Dialog>
+            <DialogTrigger asChild>
+              <button
+                className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-muted transition-colors"
                 title="الخيارات"
               >
                 <Settings2 className="w-4 h-4" />
@@ -473,6 +489,184 @@ function MealCard({
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+// ── Recipe manager ───────────────────────────────────────────────────────────
+// Links a meal to inventory items it consumes per unit (bill-of-materials).
+// When a POS bill is paid these quantities are auto-deducted from stock.
+const RECIPE_UNIT_LABEL: Record<string, string> = {
+  kg: "كغ", g: "غ", l: "لتر", ml: "مل", piece: "قطعة",
+  box: "صندوق", pack: "عبوة", bottle: "زجاجة", dozen: "دزينة", bag: "كيس",
+};
+
+interface RecipeInvItem {
+  id: string;
+  name: string;
+  unit: string;
+  currentQuantity: number | string;
+}
+interface RecipeLine {
+  inventoryItemId: string;
+  quantity: number;
+  name: string;
+  unit: string;
+  currentQuantity: number;
+}
+
+function unwrapList<T>(res: { data: unknown }): T[] {
+  const payload = res.data as { data?: T[] } | T[];
+  if (Array.isArray(payload)) return payload;
+  if (payload && Array.isArray((payload as { data?: T[] }).data)) {
+    return (payload as { data: T[] }).data;
+  }
+  return [];
+}
+
+function RecipeManager({ mealId }: { mealId: string }) {
+  const { success, error } = useToast();
+  const qc = useQueryClient();
+
+  const itemsQuery = useQuery<RecipeInvItem[]>({
+    queryKey: ["inventory-items"],
+    queryFn: async () => unwrapList<RecipeInvItem>(await inventoryApi.listItems()),
+  });
+
+  const recipeQuery = useQuery<RecipeLine[]>({
+    queryKey: ["meal-recipe", mealId],
+    queryFn: async () => unwrapList<RecipeLine>(await mealsApi.getRecipe(mealId)),
+  });
+
+  // Draft: inventoryItemId → quantity (as string for the input). Seeded from
+  // the saved recipe once it loads.
+  const [draft, setDraft] = useState<Record<string, string>>({});
+  const [seeded, setSeeded] = useState(false);
+  const [picker, setPicker] = useState("");
+
+  useEffect(() => {
+    if (recipeQuery.data && !seeded) {
+      const next: Record<string, string> = {};
+      for (const l of recipeQuery.data) next[l.inventoryItemId] = String(l.quantity);
+      setDraft(next);
+      setSeeded(true);
+    }
+  }, [recipeQuery.data, seeded]);
+
+  const items = itemsQuery.data ?? [];
+  const itemsById = new Map(items.map((i) => [i.id, i]));
+  const chosenIds = Object.keys(draft);
+  const available = items.filter((i) => !(i.id in draft));
+
+  const save = useMutation({
+    mutationFn: async () => {
+      const lines = chosenIds
+        .map((id) => ({ inventoryItemId: id, quantity: Number(draft[id]) }))
+        .filter((l) => Number.isFinite(l.quantity) && l.quantity > 0);
+      return mealsApi.setRecipe(mealId, lines);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["meal-recipe", mealId] });
+      success("تم حفظ المكوّنات");
+    },
+    onError: () => error("خطأ", "فشل حفظ المكوّنات"),
+  });
+
+  if (itemsQuery.isLoading || recipeQuery.isLoading) {
+    return (
+      <div className="py-8 text-center">
+        <Loader2 className="w-6 h-6 animate-spin mx-auto text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (items.length === 0) {
+    return (
+      <div className="py-8 text-center text-muted-foreground space-y-2">
+        <AlertTriangle className="w-7 h-7 mx-auto text-warning" />
+        <p className="text-sm font-semibold">لا توجد أصناف مخزون بعد</p>
+        <p className="text-xs">أضف مكوّنات المطعم من صفحة «المخزون» أولاً، ثم اربطها بالوجبة هنا.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      <p className="text-xs text-muted-foreground">
+        حدّد كمية كل مكوّن لكل وحدة من «{""}الوجبة». عند دفع الفاتورة في نقاط البيع
+        تُخصم هذه الكميات تلقائياً من المخزون.
+      </p>
+
+      {chosenIds.length === 0 ? (
+        <div className="text-center text-xs text-muted-foreground py-4 border border-dashed border-border rounded-xl">
+          لا توجد مكوّنات مرتبطة بعد
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {chosenIds.map((id) => {
+            const item = itemsById.get(id);
+            if (!item) return null;
+            return (
+              <div key={id} className="flex items-center gap-2">
+                <span className="flex-1 text-sm font-semibold truncate">{item.name}</span>
+                <input
+                  type="number"
+                  step="0.001"
+                  min="0"
+                  value={draft[id]}
+                  onChange={(e) => setDraft((d) => ({ ...d, [id]: e.target.value }))}
+                  className="w-24 px-2 py-1.5 border border-border rounded-lg text-sm"
+                  placeholder="0"
+                />
+                <span className="w-10 text-xs text-muted-foreground">
+                  {RECIPE_UNIT_LABEL[item.unit] ?? item.unit}
+                </span>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setDraft((d) => {
+                      const next = { ...d };
+                      delete next[id];
+                      return next;
+                    })
+                  }
+                  className="w-7 h-7 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-error-light hover:text-error transition-colors"
+                  title="إزالة"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {available.length > 0 && (
+        <div className="flex items-center gap-2 pt-1">
+          <select
+            value={picker}
+            onChange={(e) => {
+              const id = e.target.value;
+              if (id) {
+                setDraft((d) => ({ ...d, [id]: "" }));
+                setPicker("");
+              }
+            }}
+            className="flex-1 px-3 py-2 border border-border rounded-lg text-sm bg-white"
+          >
+            <option value="">+ إضافة مكوّن…</option>
+            {available.map((i) => (
+              <option key={i.id} value={i.id}>
+                {i.name} ({RECIPE_UNIT_LABEL[i.unit] ?? i.unit})
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      <Button onClick={() => save.mutate()} loading={save.isPending} className="w-full">
+        حفظ المكوّنات
+      </Button>
     </div>
   );
 }

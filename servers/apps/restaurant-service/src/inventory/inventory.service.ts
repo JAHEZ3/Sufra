@@ -10,9 +10,12 @@ import { DataSource, Repository } from "typeorm";
 import { Restaurant } from "../entities/restaurant.entity";
 import { InventoryItem } from "../entities/inventory-item.entity";
 import { InventoryMovement, MovementType } from "../entities/inventory-movement.entity";
+import { MealIngredient } from "../entities/meal-ingredient.entity";
+import { Meal } from "../entities/meal.entity";
 import {
   CreateInventoryItemDto,
   RecordMovementDto,
+  SetRecipeDto,
   UpdateInventoryItemDto,
 } from "../dto/inventory.dto";
 
@@ -25,6 +28,10 @@ export class InventoryService {
     private readonly movementRepo: Repository<InventoryMovement>,
     @InjectRepository(Restaurant)
     private readonly restaurantRepo: Repository<Restaurant>,
+    @InjectRepository(MealIngredient)
+    private readonly recipeRepo: Repository<MealIngredient>,
+    @InjectRepository(Meal)
+    private readonly mealRepo: Repository<Meal>,
     private readonly dataSource: DataSource,
   ) {}
 
@@ -244,5 +251,103 @@ export class InventoryService {
       },
       lowStock,
     };
+  }
+
+  // ─── Recipes (meal → ingredients bill-of-materials) ───────────────────────
+
+  // Verify the meal belongs to the caller's restaurant; returns its id.
+  private async assertMealOwned(
+    mealId: string,
+    userId: string,
+    role: string,
+  ): Promise<string> {
+    const restaurantId = await this.resolveOwnedRestaurant(userId, role);
+    const meal = await this.mealRepo.findOne({ where: { id: mealId } });
+    if (!meal) throw new NotFoundException("الوجبة غير موجودة");
+    if (meal.restaurantId !== restaurantId) {
+      throw new ForbiddenException("هذه الوجبة لا تخصك");
+    }
+    return restaurantId;
+  }
+
+  /** A meal's recipe lines, each enriched with its inventory item details. */
+  async getRecipe(mealId: string, userId: string, role: string) {
+    await this.assertMealOwned(mealId, userId, role);
+    const rows: Array<{
+      id: string;
+      inventory_item_id: string;
+      quantity: string;
+      name: string;
+      unit: string;
+      current_quantity: string;
+      unit_cost: string;
+    }> = await this.recipeRepo.manager.query(
+      `SELECT mi.id,
+              mi.inventory_item_id,
+              mi.quantity,
+              it.name,
+              it.unit,
+              it.current_quantity,
+              it.unit_cost
+         FROM meal_ingredients mi
+         JOIN inventory_items it ON it.id = mi.inventory_item_id
+        WHERE mi.meal_id = $1
+        ORDER BY it.name ASC`,
+      [mealId],
+    );
+    return rows.map((r) => ({
+      id: r.id,
+      inventoryItemId: r.inventory_item_id,
+      quantity: Number(r.quantity),
+      name: r.name,
+      unit: r.unit,
+      currentQuantity: Number(r.current_quantity),
+      unitCost: Number(r.unit_cost),
+    }));
+  }
+
+  /**
+   * Replace a meal's entire recipe. Validates every referenced inventory item
+   * belongs to the same restaurant, then swaps the lines atomically. Duplicate
+   * item ids in the payload are collapsed (last quantity wins).
+   */
+  async setRecipe(mealId: string, userId: string, role: string, dto: SetRecipeDto) {
+    const restaurantId = await this.assertMealOwned(mealId, userId, role);
+
+    // Collapse duplicates so the unique (meal, item) index can't be violated.
+    const byItem = new Map<string, number>();
+    for (const line of dto.lines) {
+      byItem.set(line.inventoryItemId, line.quantity);
+    }
+
+    if (byItem.size > 0) {
+      const ids = [...byItem.keys()];
+      const owned = await this.itemRepo.find({
+        where: { restaurantId },
+        select: { id: true },
+      });
+      const ownedIds = new Set(owned.map((i) => i.id));
+      for (const id of ids) {
+        if (!ownedIds.has(id)) {
+          throw new BadRequestException("أحد المكونات لا ينتمي لهذا المطعم");
+        }
+      }
+    }
+
+    return this.dataSource.transaction(async (em) => {
+      await em.delete(MealIngredient, { mealId });
+      for (const [inventoryItemId, quantity] of byItem) {
+        await em.save(
+          MealIngredient,
+          em.create(MealIngredient, {
+            mealId,
+            inventoryItemId,
+            restaurantId,
+            quantity,
+          }),
+        );
+      }
+      return this.getRecipe(mealId, userId, role);
+    });
   }
 }

@@ -34,6 +34,7 @@ import { RestaurantExpense } from './entities/restaurant-expense.entity';
 import { InventoryService } from './inventory/inventory.service';
 import { InventoryItem } from './entities/inventory-item.entity';
 import { InventoryMovement } from './entities/inventory-movement.entity';
+import { MealIngredient } from './entities/meal-ingredient.entity';
 import { RestaurantAnalyticsService } from './analytics/analytics.service';
 import { OrderRead } from './analytics/read-models/order.read';
 import { OrderItemRead } from './analytics/read-models/order-item.read';
@@ -68,6 +69,7 @@ import { RestaurantRatingsService } from './ratings/restaurant-ratings.service';
       RestaurantExpense,
       InventoryItem,
       InventoryMovement,
+      MealIngredient,
       RestaurantRating,
       OrderRead, OrderItemRead, DeliveryRead, OrderRatingRead,
     ]),

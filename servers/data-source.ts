@@ -17,6 +17,7 @@ import { MenuSection } from './apps/restaurant-service/src/entities/menu-section
 import { Meal } from './apps/restaurant-service/src/entities/meal.entity';
 import { MealOptionGroup } from './apps/restaurant-service/src/entities/meal-option-group.entity';
 import { MealOption } from './apps/restaurant-service/src/entities/meal-option.entity';
+import { MealIngredient } from './apps/restaurant-service/src/entities/meal-ingredient.entity';
 
 // Order
 import { PromoCode } from './apps/order-service/src/entities/promo-code.entity';
@@ -51,7 +52,7 @@ export const AppDataSource = new DataSource({
   entities: [
     User, OtpCode, RefreshToken,
     Restaurant, RestaurantRequest, RestaurantHour, RestaurantCategory, RestaurantCategoryMap,
-    Menu, MenuSection, Meal, MealOptionGroup, MealOption,
+    Menu, MenuSection, Meal, MealOptionGroup, MealOption, MealIngredient,
     PromoCode, Order, OrderItem, OrderItemOption, OrderStatusHistory, OrderRating,
     Manager, AuditLog,
     GeneralSettings, FeesSettings, DeliverySettings, NotificationSettings, SystemSettings, PaymentSettings,

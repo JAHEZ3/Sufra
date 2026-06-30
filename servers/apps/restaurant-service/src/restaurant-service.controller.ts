@@ -8,6 +8,7 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Put,
   Query,
   Res,
   UploadedFile,
@@ -43,6 +44,7 @@ import { InventoryService } from "./inventory/inventory.service";
 import {
   CreateInventoryItemDto,
   RecordMovementDto,
+  SetRecipeDto,
   UpdateInventoryItemDto,
 } from "./dto/inventory.dto";
 import { CreateCategoryDto } from "./dto/create-category.dto";
@@ -1243,6 +1245,29 @@ export class RestaurantServiceController {
     @Query("limit") limit?: string,
   ) {
     return this.inventory.listMovements(itemId, user.sub, user.role, Number(limit) || 100);
+  }
+
+  /** GET /api/restaurant/meals/:mealId/recipe — a meal's bill-of-materials */
+  @Get("meals/:mealId/recipe")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("restaurant_owner")
+  getMealRecipe(
+    @Param("mealId", ParseUUIDPipe) mealId: string,
+    @CurrentUser() user: { sub: string; role: string },
+  ) {
+    return this.inventory.getRecipe(mealId, user.sub, user.role);
+  }
+
+  /** PUT /api/restaurant/meals/:mealId/recipe — replace the recipe lines */
+  @Put("meals/:mealId/recipe")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("restaurant_owner")
+  setMealRecipe(
+    @Param("mealId", ParseUUIDPipe) mealId: string,
+    @CurrentUser() user: { sub: string; role: string },
+    @Body() dto: SetRecipeDto,
+  ) {
+    return this.inventory.setRecipe(mealId, user.sub, user.role, dto);
   }
 
   /**

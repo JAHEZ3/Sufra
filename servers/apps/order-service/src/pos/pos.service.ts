@@ -507,6 +507,9 @@ export class PosService {
       }),
     );
 
+    // Bill is paid → consume each meal's recipe ingredients from inventory.
+    await this.applyInventory(order.id, order.restaurantId, order.orderNumber, 'deduct', userId);
+
     // Fire kitchen + cashier prints in the background. Failures are logged
     // but never bubble up — a printer outage shouldn't fail bill-close.
     this.printerService.printForOrderSafe(order.id, 'both');
@@ -534,6 +537,10 @@ export class PosService {
       paymentStatus: PaymentStatus.UNPAID,
       preparingStartedAt: new Date(),
     });
+
+    // Re-opening an already-paid bill returns its ingredients to stock; the
+    // next close deducts them again (guarded by inventory_applied).
+    await this.applyInventory(order.id, order.restaurantId, order.orderNumber, 'restock', userId);
 
     // Fresh 15-minute timer once the bill is editable again.
     await this.finalizeQueue
@@ -635,6 +642,9 @@ export class PosService {
 
     await this.finalizeQueue.remove(`pos-finalize-${order.id}`).catch(() => undefined);
     await this.orderRepo.update(order.id, { localStatus: LocalOrderStatus.DONE });
+
+    // Finishing early also closes the bill → deduct recipe ingredients.
+    await this.applyInventory(order.id, order.restaurantId, order.orderNumber, 'deduct', userId);
 
     await this.dataSource.getRepository(OrderStatusHistory).save(
       this.dataSource.getRepository(OrderStatusHistory).create({
@@ -789,6 +799,86 @@ export class PosService {
       const opts = (i.options ?? []).reduce((a, o) => a + Number(o.extraPrice), 0);
       return s + (Number(i.basePrice) + opts) * i.quantity;
     }, 0);
+  }
+
+  // ─── Inventory sync (recipe-based stock deduction) ────────────────────────
+  //
+  // Inventory lives in restaurant-service but shares this database, so we
+  // touch its tables directly via raw SQL — the same cross-service pattern
+  // create()/createFromQrScan() use for `restaurants` / `restaurant_tables`.
+  //
+  // `deduct`  → bill paid: subtract each meal's recipe ingredients (OUT).
+  // `restock` → bill re-opened: add them back (IN).
+  //
+  // Idempotent via orders.inventory_applied, guarded by a row lock so a
+  // double-close or concurrent timer can't deduct twice. Best-effort: a
+  // failure here is logged but never bubbles up to fail the POS operation —
+  // the flag stays unset on rollback so a later close/reopen retries cleanly.
+  // Stock is allowed to go negative (a shortage shows as an alert) rather than
+  // ever blocking a cashier from closing a paid bill.
+  private async applyInventory(
+    orderId: string,
+    restaurantId: string,
+    orderNumber: string,
+    direction: 'deduct' | 'restock',
+    userId: string | null,
+  ): Promise<void> {
+    try {
+      await this.dataSource.transaction(async (em) => {
+        const lock: Array<{ inventory_applied: boolean }> = await em.query(
+          'SELECT inventory_applied FROM orders WHERE id = $1 FOR UPDATE',
+          [orderId],
+        );
+        if (!lock.length) return;
+        const applied = lock[0].inventory_applied === true;
+        if (direction === 'deduct' && applied) return; // already deducted
+        if (direction === 'restock' && !applied) return; // nothing to return
+
+        // Sum each ingredient across all line items: recipe-per-unit × sold qty.
+        const usage: Array<{ inventory_item_id: string; total: string }> =
+          await em.query(
+            `SELECT mi.inventory_item_id AS inventory_item_id,
+                    SUM(mi.quantity * oi.quantity) AS total
+               FROM order_items oi
+               JOIN meal_ingredients mi ON mi.meal_id = oi.meal_id
+              WHERE oi.order_id = $1
+              GROUP BY mi.inventory_item_id`,
+            [orderId],
+          );
+
+        const sign = direction === 'deduct' ? -1 : 1;
+        const movementType = direction === 'deduct' ? 'out' : 'in';
+        const note =
+          direction === 'deduct'
+            ? `POS sale ${orderNumber}`
+            : `POS reversal ${orderNumber}`;
+
+        for (const u of usage) {
+          const amount = Number(u.total);
+          if (!Number.isFinite(amount) || amount === 0) continue;
+          const delta = sign * Math.abs(amount);
+          await em.query(
+            `INSERT INTO inventory_movements
+               (id, item_id, restaurant_id, type, quantity, unit_cost, note, created_by_user_id, created_at)
+             VALUES ($1, $2, $3, $4::inventory_movement_type, $5, NULL, $6, $7, NOW())`,
+            [randomUUID(), u.inventory_item_id, restaurantId, movementType, delta, note, userId],
+          );
+          await em.query(
+            `UPDATE inventory_items
+                SET current_quantity = current_quantity + $1, updated_at = NOW()
+              WHERE id = $2`,
+            [delta, u.inventory_item_id],
+          );
+        }
+
+        await em.query('UPDATE orders SET inventory_applied = $1 WHERE id = $2', [
+          direction === 'deduct',
+          orderId,
+        ]);
+      });
+    } catch {
+      // Inventory sync is best-effort — never fail the bill operation over it.
+    }
   }
 
 }

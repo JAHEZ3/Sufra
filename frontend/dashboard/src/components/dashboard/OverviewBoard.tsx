@@ -14,6 +14,7 @@ import {
 } from "@/hooks/useAnalytics";
 import { useRestaurant } from "@/hooks/useRestaurant";
 import { useCurrency } from "@/hooks/useCurrency";
+import { InventoryOverview } from "@/components/dashboard/InventoryOverview";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Wallet,
@@ -298,6 +299,9 @@ export function OverviewBoard() {
           )}
         </Card>
       </div>
+
+      {/* المخزون */}
+      <InventoryOverview />
     </div>
   );
 }

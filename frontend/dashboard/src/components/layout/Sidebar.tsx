@@ -14,6 +14,7 @@ import {
   Receipt,
   QrCode,
   LifeBuoy,
+  Package,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SufraMark } from "@/components/ui/sufra-logo";
@@ -26,9 +27,10 @@ const navItems = [
   { href: "/pos", icon: Receipt, label: "نقطة البيع" },
   { href: "/tables", icon: QrCode, label: "الطاولات" },
   { href: "/menu", icon: UtensilsCrossed, label: "القائمة" },
+  { href: "/inventory", icon: Package, label: "المخزون" },
   { href: "/analytics", icon: BarChart3, label: "الإحصائيات" },
-  // Hidden from the dashboard nav: المحاسبة (accounting), المخزون (inventory),
-  // التقييمات (ratings). The routes still exist; just not surfaced here.
+  // Hidden from the dashboard nav: المحاسبة (accounting), التقييمات (ratings).
+  // The routes still exist; just not surfaced here.
   { href: "/notifications", icon: Bell, label: "الإشعارات" },
   { href: "/support", icon: LifeBuoy, label: "الدعم" },
   { href: "/settings", icon: Settings, label: "الإعدادات" },

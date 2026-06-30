@@ -424,6 +424,14 @@ export const mealsApi = {
   // AI menu copywriting — Arabic description from name (+ optional price/section).
   generateCopy: (data: { name: string; price?: number; sectionName?: string }) =>
     restaurantInstance.post("/api/restaurant/ai/meal-copy", data),
+
+  // Recipe (bill-of-materials): which inventory items a meal consumes per unit.
+  getRecipe: (mealId: string) =>
+    restaurantInstance.get(`/api/restaurant/meals/${mealId}/recipe`),
+  setRecipe: (
+    mealId: string,
+    lines: { inventoryItemId: string; quantity: number }[],
+  ) => restaurantInstance.put(`/api/restaurant/meals/${mealId}/recipe`, { lines }),
 };
 
 export const aiVoiceApi = {

@@ -1,11 +1,15 @@
 import {
+  ArrayMaxSize,
+  IsArray,
   IsBoolean,
   IsEnum,
   IsNumber,
   IsOptional,
   IsString,
+  IsUUID,
   Length,
   Min,
+  ValidateNested,
 } from "class-validator";
 import { Type } from "class-transformer";
 import { InventoryUnit } from "../entities/inventory-item.entity";
@@ -103,4 +107,25 @@ export class RecordMovementDto {
   @IsOptional()
   @IsString()
   note?: string;
+}
+
+/** One recipe line: how much of an inventory item a meal consumes per unit. */
+export class RecipeLineDto {
+  @IsUUID()
+  inventoryItemId: string;
+
+  // Amount in the inventory item's own unit (e.g. 150 g, 1 piece). Must be > 0.
+  @IsNumber()
+  @Min(0.001)
+  @Type(() => Number)
+  quantity: number;
+}
+
+/** Replace-all payload for a meal's recipe (bill-of-materials). */
+export class SetRecipeDto {
+  @IsArray()
+  @ArrayMaxSize(100)
+  @ValidateNested({ each: true })
+  @Type(() => RecipeLineDto)
+  lines: RecipeLineDto[];
 }

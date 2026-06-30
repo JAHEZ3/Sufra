@@ -63,4 +63,10 @@ export class LocalOrder extends Order {
     reference?: string;
     payerName?: string;
   }>;
+
+  // True once this bill's ingredients have been deducted from inventory
+  // (set when the bill is closed → DONE). Cleared when the bill is re-opened
+  // and the stock is returned. Guards against double-deduction on re-close.
+  @Column({ name: 'inventory_applied', type: 'boolean', default: false })
+  inventoryApplied: boolean;
 }

@@ -6,8 +6,24 @@ import { RouterProvider } from "@/providers/RouterProvider";
 import { CurrencyProvider } from "@/providers/CurrencyProvider";
 
 export const metadata: Metadata = {
-  title: "جاهز | لوحة تحكم المطعم",
-  description: "إدارة مطعمك بكل سهولة مع منصة جاهز",
+  metadataBase: new URL("https://sufra.app"),
+  title: {
+    default: "سُفرة | منصة إدارة المطاعم",
+    template: "%s | سُفرة",
+  },
+  description:
+    "سُفرة منصة متكاملة لإدارة المطاعم: نقاط البيع، الطلبات، المخزون، المحاسبة والتحليلات في مكان واحد.",
+  applicationName: "سُفرة",
+  keywords: ["سُفرة", "Sufra", "إدارة المطاعم", "نقاط البيع", "POS", "مطعم"],
+  authors: [{ name: "Sufra" }],
+  openGraph: {
+    title: "سُفرة | منصة إدارة المطاعم",
+    description:
+      "منصة متكاملة لإدارة المطاعم: نقاط البيع، الطلبات، المخزون، المحاسبة والتحليلات.",
+    siteName: "سُفرة",
+    locale: "ar_SA",
+    type: "website",
+  },
 };
 
 export const viewport: Viewport = {
