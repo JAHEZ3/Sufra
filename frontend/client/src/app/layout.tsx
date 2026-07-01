@@ -45,6 +45,11 @@ export async function generateMetadata(): Promise<Metadata> {
     description,
     keywords: ["توصيل طعام", "فلسطين", "مطاعم", "جاهز", "طلب طعام أونلاين"],
     authors: [{ name: seo?.platformName ?? "جاهز" }],
+    // Tab/bookmark icon follows the platform's branding image when set (white-label);
+    // otherwise the static app/favicon.ico is served by the file-based convention.
+    icons: ogImage
+      ? { icon: ogImage, shortcut: "/favicon.ico", apple: ogImage }
+      : { icon: "/favicon.ico", shortcut: "/favicon.ico" },
     openGraph: {
       title: defaultTitle,
       description,
