@@ -27,11 +27,16 @@ spec:
 ---
 apiVersion: v1
 kind: Service
-metadata: { name: api-gateway, namespace: sufra }
+metadata:
+  name: api-gateway
+  namespace: sufra
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /api/gateway
+    # Socket.IO spans 2 replicas: pin each client to one pod via ALB stickiness.
+    alb.ingress.kubernetes.io/target-group-attributes: stickiness.enabled=true,stickiness.lb_cookie.duration_seconds=86400
 spec:
-  type: LoadBalancer
   selector: { app: api-gateway }
-  ports: [{ port: 80, targetPort: 3000 }]
+  ports: [{ port: 3000, targetPort: 3000 }]
   
 # ─────────────────────────────────────────────────────────────────────────────
 ---
@@ -59,7 +64,10 @@ spec:
 ---
 apiVersion: v1
 kind: Service
-metadata: { name: auth-service, namespace: sufra }
+metadata:
+  name: auth-service
+  namespace: sufra
+  annotations: { alb.ingress.kubernetes.io/healthcheck-path: /api/auth }
 spec:
   selector: { app: auth-service }
   ports: [{ port: 3004, targetPort: 3004 }]
@@ -89,7 +97,10 @@ spec:
 ---
 apiVersion: v1
 kind: Service
-metadata: { name: order-service, namespace: sufra }
+metadata:
+  name: order-service
+  namespace: sufra
+  annotations: { alb.ingress.kubernetes.io/healthcheck-path: /api/order }
 spec:
   selector: { app: order-service }
   ports: [{ port: 3001, targetPort: 3001 }]
@@ -119,7 +130,10 @@ spec:
 ---
 apiVersion: v1
 kind: Service
-metadata: { name: restaurant-service, namespace: sufra }
+metadata:
+  name: restaurant-service
+  namespace: sufra
+  annotations: { alb.ingress.kubernetes.io/healthcheck-path: /api/restaurant }
 spec:
   selector: { app: restaurant-service }
   ports: [{ port: 3003, targetPort: 3003 }]
@@ -149,7 +163,10 @@ spec:
 ---
 apiVersion: v1
 kind: Service
-metadata: { name: manager-service, namespace: sufra }
+metadata:
+  name: manager-service
+  namespace: sufra
+  annotations: { alb.ingress.kubernetes.io/healthcheck-path: /api/manager }
 spec:
   selector: { app: manager-service }
   ports: [{ port: 3006, targetPort: 3006 }]
@@ -179,7 +196,10 @@ spec:
 ---
 apiVersion: v1
 kind: Service
-metadata: { name: notification-service, namespace: sufra }
+metadata:
+  name: notification-service
+  namespace: sufra
+  annotations: { alb.ingress.kubernetes.io/healthcheck-path: /api/notification }
 spec:
   selector: { app: notification-service }
   ports: [{ port: 3007, targetPort: 3007 }]
