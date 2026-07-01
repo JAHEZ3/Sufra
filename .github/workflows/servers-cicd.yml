@@ -138,9 +138,14 @@ jobs:
       - name: Set new image tags
         working-directory: servers/k8s/base
         env:
-          REGISTRY: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
-          TAG: sha-${{ github.sha }}
+          AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
         run: |
+          # Strip any stray whitespace/newlines from the secrets, otherwise the
+          # registry URL gets split across lines and produces invalid image refs.
+          ACCOUNT="$(printf '%s' "$AWS_ACCOUNT_ID" | tr -d '[:space:]')"
+          REGION="$(printf '%s' "$AWS_REGION" | tr -d '[:space:]')"
+          REGISTRY="${ACCOUNT}.dkr.ecr.${REGION}.amazonaws.com"
           SHORT="sha-${GITHUB_SHA::7}"
           for s in $SERVICES; do
             kustomize edit set image "sufra/$s=${REGISTRY}/sufra/$s:${SHORT}"
