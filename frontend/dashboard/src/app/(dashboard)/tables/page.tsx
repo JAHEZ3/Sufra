@@ -52,7 +52,7 @@ interface RestaurantTable {
   activeOrder?: ActiveOrder | null;
 }
 
-const CLIENT_URL = "http:/10.5.50.56:3010";
+const CLIENT_URL = "https://app.sufra.shop";
 
 // Turn a restaurant name into a URL-safe path segment. Keeps Arabic letters
 // (browsers display them fine after percent-encoding), drops punctuation,
@@ -714,7 +714,9 @@ export default function TablesPage() {
                             className="w-8 h-8 rounded-lg"
                             title="حذف"
                             onClick={async () => {
-                              if (await confirmDialog(`حذف الطاولة ${t.number}؟`)) {
+                              if (
+                                await confirmDialog(`حذف الطاولة ${t.number}؟`)
+                              ) {
                                 remove.mutate(t.id);
                               }
                             }}
